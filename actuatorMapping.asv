@@ -1,0 +1,131 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Map simulator coords to actuators
+% 15/2/11
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+function actuatorMapping(hull, x)
+
+    %% create virtual boat plane
+    cube1 = UnitCube;
+    plane = scale(cube1, 1.5, 1, 0.1);
+    plane.facecolor = 'blue';
+    plane.edgecolor = 'black';
+
+    %% create actuator models
+    cyl1 = UnitCylinder(1);
+    cyl1.facecolor = 'red';
+    cyl1.edgecolor = 'black';
+    actuatormodel = scale(cyl1, 0.1,0.1,0.25);
+    actuator.x = -1.5; actuator.y = -1; actuator.z = 0;
+    actuator.model = translate(actuatormodel,-1.5,-1,0.25);
+    actuators(1) = actuator;
+    actuator.x = -1.5; actuator.y = 1; actuator.z = 0;
+    actuator.model = translate(actuatormodel,-1.5,1,0.25);
+    actuators(2) = actuator;
+    actuator.x = 1.5; actuator.y = 1; actuator.z = 0;
+    actuator.model = translate(actuatormodel,1.5,1,0.25);
+    actuators(3) = actuator;
+    actuator.x = 1.5; actuator.y = -1; actuator.z = 0;
+    actuator.model = translate(actuatormodel,1.5,-1,0.25);
+    actuators(4) = actuator;
+    
+    % actuator length/eqm distance
+    % note actuator z is extension from eqm distance
+    actuatorlength = 0.5;
+
+    %% map simulator coords to actuators to move model boat
+    % ignore x1, x2 and x6 as these are not simulated physically
+    
+    
+
+    
+    %% map desired heights to actuator heights
+  
+    % ensure no distance saturation of actuators
+    maxActuatorz = 0.5; %so total distance is maxActuatorz+actuatorlength
+   
+    
+    minActuatorz = -0.5;
+   
+    
+    ip = [0 x(4) x(5)]';
+    %ip = [0 0 0]';
+    op = fminsearch(@orientationCost,ip,optimset('MaxFunEvals',999,'MaxIter',999),x,hull,maxActuatorz,minActuatorz);
+    hull = transformObject(hull,[0 0 op' 0]');
+    desiredHeights(1) = hull.model.vertices(2,3) + 0.86;
+    desiredHeights(2) = hull.model.vertices(3,3) + 0.86;
+    desiredHeights(3) = hull.model.vertices(6,3) + 0.86;
+    desiredHeights(4) = hull.model.vertices(7,3) + 0.86;
+    
+  
+    [lol maxn] = max(desiredHeights);
+    d1 = 0;
+    if actuatorHeight(desiredHeights(maxn)) > maxActuatorz
+        d1 = actuatorHeight(desiredHeights(maxn)) - maxActuatorz;
+    end
+    [lol minn] = min(desiredHeights);
+    d2 = 0;
+    if actuatorHeight(desiredHeights(minn)) < minActuatorz
+        d2 = minActuatorz - actuatorHeight(desiredHeights(minn));
+    end
+    
+    % map desired heights to actuator heights
+    for n=1:1:length(actuators)
+        actuators(n).z = actuatorHeight(desiredHeights(n));
+        if actuators(n).z > maxActuatorz
+            actuators(n).z = actuators(n).z - d1;
+        else actuators(n).z < minActuatorz;
+            actuators(n).z = actuators(n).z + d2;
+        end
+        actuators(n).model = scale(actuators(n).model,1,1,(actuators(n).z + actuatorlength)/actuatorlength);
+    end
+    
+    
+    % affect the boat due to rigid coupling of actuators
+    plane.vertices(1,3) = actuators(1).z + actuatorlength;
+    plane.vertices(5,3) = actuators(1).z + actuatorlength + 0.2;
+    plane.vertices(4,3) = actuators(2).z + actuatorlength;
+    plane.vertices(8,3) = actuators(2).z + actuatorlength + 0.2;
+    plane.vertices(3,3) = actuators(3).z + actuatorlength;
+    plane.vertices(7,3) = actuators(3).z + actuatorlength + 0.2;
+    plane.vertices(2,3) = actuators(4).z + actuatorlength;
+    plane.vertices(6,3) = actuators(4).z + actuatorlength + 0.2;
+    
+    clf;
+    fullmodel = combine(plane,actuators(1).model,actuators(2).model,actuators(3).model,actuators(4).model);
+    surf(-3:1:3,-3:1:3,zeros(length(-3:1:3)));
+    renderpatch(fullmodel);
+    axis([-3 3 -3 3 0 6])
+    view(-24,10)
+    
+    function cost = orientationCost(p, x, hull, max, min)
+        % get the positions of the points on the computer hull you want to map
+        % to each actuator
+        hull = transformObject(hull,[0 0 p' 0]');
+        bestHeights(1) = hull.model.vertices(2,3) + 0.86;
+        bestHeights(2) = hull.model.vertices(3,3) + 0.86;
+        bestHeights(3) = hull.model.vertices(6,3) + 0.86;
+        bestHeights(4) = hull.model.vertices(7,3) + 0.86;
+        
+        cost = (x(3)-p(1))^2 + (x(4)-p(2))^2 + (x(5)-p(3))^2; 
+        for n=1:1:length(bestHeights)
+            %logarithmic barrier
+            actHeight = actuatorHeight(bestHeights(n));
+            u1 = actHeight - max;
+            u2 = min - actHeight;
+            if u1 > 0
+                u1 = 0;
+            end
+            if u2 > 0
+                u2 = 0;
+            end
+            cost = cost - (1/100)*log(-u1) - (1/100)*log(-u2);
+        end
+        
+        %differences in pairs must be the same
+        cost = cost - (1/100)*log(-(bestHeights
+        
+    
+    % mapping of desired extension to real extension
+    function z = actuatorHeight(desiredHeight)
+        z = 0.5*desiredHeight;

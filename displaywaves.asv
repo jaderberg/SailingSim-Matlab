@@ -1,0 +1,16 @@
+function displaywaves(datafile,X,Y,t)
+    
+    for i=1:1:length(t)
+        R
+        Z = dlmread(datafile,' ',[size(X,1)*(i-1) 0 size(X,1)*(i-1)-1 size(X,2)]);
+        meshz(X,Y,Z);
+        colormap winter
+        shading interp
+        axis(axvec)
+        view(az,20);
+        axis off
+        axis vis3d
+        az = az + 0.1;
+        pause(t(2)-t(1));
+    end
+

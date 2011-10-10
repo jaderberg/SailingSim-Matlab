@@ -1,0 +1,30 @@
+function newObj = transformObject(object, prevx, deltax)
+        newObj = object;
+        
+        model = object.model;
+        transVec = object.transVector;
+        
+        % translate back to centre of rotation
+        vec = -prevx(1:3) - transVec;
+        model = translate(model,vec(1),vec(2),vec(3));
+        
+        % take off existing rotation in order it was put on
+        model = rotateZ(model,0);
+        model = rotateY(model,0);
+        model = rotateX(model,0);
+        
+        % now do any rotations
+        model = rotateX(model,deltax(4));
+        model = rotateY(model,deltax(5));
+        model = rotateZ(model,deltax(6));
+        
+        % add existing rotation back on
+        model = rotateX(model,prevx(4)+detax(4));
+        model = rotateY(model,prevx(5)+deltax(5));
+        model = rotateZ(model,prevx(6));
+        
+        % now translate back and add extra translation
+        vec = transVec + prevx(1:3) + deltax(1:3);
+        model = translate(model,vec(1),vec(2),vec(3));
+        
+        newObj.model = model;
